@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using LocationAPI.Models;
+using LocationAPI.Models.Database;
+using Microsoft.EntityFrameworkCore;
 
 namespace LocationAPI.Controllers
 {
@@ -8,67 +10,61 @@ namespace LocationAPI.Controllers
     [ApiController]
     public class CountryController : ControllerBase
     {
-        List<CountryModel> countries = new List<CountryModel>{
-
-                new CountryModel(){
-                CountryId = 1,
-                CountryName = "India"
-                },
-                new CountryModel(){
-                CountryId = 2,
-                CountryName = "USA"
-                },
-                new CountryModel(){
-                CountryId = 3,
-                CountryName = "Canada"
-                },
-                new CountryModel(){
-                CountryId = 4,
-                CountryName = "UK"
-                },
-            };
-
-
-        [HttpGet(Name = "GetCountries")]
-        public ActionResult<List<CountryModel>> Get()
+        private readonly LocationDbContext _context;
+        public CountryController(LocationDbContext context)
         {
-
-            return Ok(countries);
+            _context = context;
         }
-        [HttpGet("{id}")]
-        public ActionResult<CountryModel> Get(int id)
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<CountryModel>>> GetCountries()
         {
-            if (id <= 0)
+            return await _context.Countries.ToListAsync();
+        }
+
+        [HttpGet("{id}")]
+        public async Task<ActionResult<CountryModel>> GetCountrybyId(int id)
+        {
+            var obj = await _context.Countries.FindAsync(id);
+
+            if (obj == null)
             {
-                return BadRequest("Id should not be zero or negative");
+                return NotFound();
             }
 
-            return Ok(countries.Where(a => a.CountryId == id));
+            return obj;
         }
 
         [HttpPost]
-        public ActionResult Post([FromBody] VMCountry country)
+        public async Task<IActionResult> Create([FromBody] VMCountry country)
         {
-            try
+            CountryModel obj = new CountryModel()
             {
+                CountryName = country.CountryName,
+                CountryCode = country.CountryCode
 
-                if (country == null)
-                {
-                    return BadRequest("Please add valid data!");
-                }
-                countries.Add(new CountryModel() { 
-                    CountryId = 0,
-                    CountryCode = country.CountryCode,
-                    CountryName = country.CountryName,
-                });
-                return Ok();
-            }
-            catch (Exception ex)
-            {
 
-                return BadRequest(ex.Message);
-            }
+            };
+            
+
+            _context.Countries.Add(obj);
+            await _context.SaveChangesAsync();
+
+            return Ok();
         }
-
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(int id, [FromBody] VMCountry country)
+        {
+            var existing=await _context.Countries.FindAsync(id);
+            if(id==null)
+            {
+                return NotFound();
+            }
+            existing.CountryName = country.CountryName;
+            existing.CountryCode=country.CountryCode;
+            //_context.Countries.Add(existing);
+            await _context.SaveChangesAsync();
+            return Ok();
+        }
+        
     }
 }
