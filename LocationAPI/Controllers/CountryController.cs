@@ -35,6 +35,7 @@ namespace LocationAPI.Controllers
 
             return Ok(countries);
         }
+
         [HttpGet("{id}")]
         public ActionResult<CountryModel> Get(int id)
         {
